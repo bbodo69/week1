@@ -1,10 +1,11 @@
+import os
+
 from PyQt5.QAxContainer import *
 from PyQt5.QtCore import *
 from config.errorCode import *
 from PyQt5.QtTest import *
 
-# 56 강 시작 2020726
-# 308 번째 줄 해결하고 (bottom_stock_price) 해결하기
+# https://www.youtube.com/watch?v=C3dXyesuiEI&list=PLDtzZPtOGenaSknTbsb6x6L39V0VPz_rS&index=60 , 18분 부터 시작
 
 class Kiwoom(QAxWidget):
     def __init__(self):
@@ -30,6 +31,7 @@ class Kiwoom(QAxWidget):
         ################
 
         ### 변수 모음
+        self.portfolio_stock_dict = {}
         self.account_num = None
         self.account_stock_dict = {}
         self.not_account_stock_dict = {}
@@ -41,14 +43,18 @@ class Kiwoom(QAxWidget):
 
         self.get_ocx_instance()
         self.event_slots()
+
         self.signal_login_commConnet()
         self.get_accout_info()
         self.detail_account_info()
         self.detail_account_mystock() # 계좌평가 잔고내역 요청
         self.not_concluded_account() # 미체결 요청
 
-        self.calculator_fnc() # 종목 분석용, 임시용으로 실행
-
+        self.read_code() # 저장된 종목을 불러온다.
+    '''
+        self.calculator_fnc() # 종목 분석용, 임시용으로 실행, 실시간X 장이 끝난 후 실행하는것
+    '''
+        
     def get_ocx_instance(self):
         self.setControl("KHOPENAPI.KHOpenAPICtrl.1")
 
@@ -286,31 +292,29 @@ class Kiwoom(QAxWidget):
 
                 else:
                     # 120일 이상 되면은
-                    print("222")
 
                     total_price = 0
                     for value in self.calcul_data[:120]:
                         total_price += int(value[1])
-                    print("total_price")
-                    print(total_price)
 
                     moving_average_price = total_price / 120
                     #오늘자 주가가 120일 이평선에 걸쳐있는지 확인
+                    bottom_stock_price = False                
+                    check_price = None
                     if int(self.calcul_data[0][7]) <= moving_average_price and moving_average_price <= int(self.calcul_data[0][6]):
                         print("오늘 주가 120이평선에 걸쳐 있는 것 확인")
                         bottom_stock_price = True
                         check_price = int(self.calcul_data[0][6])
 
-                    print("a123123")
+
                     # 과거 일봉들이 120일 이평선보다 밑에 있는지 확인
                     # 그렇게 확인을 하다가 일봉이 120일 이평선보다 위에 있으면 계산 진행
-                    prev_price = None # 과거의 일봉 저가
-                    
+
                     ##### bottom_stock_price 문제있으니 찾아서 해결하기
-                    '''
-                    print("a123232323123"+bottom_stock_price)
-                    
+
+                    prev_price = None #과거의 일봉저가
                     if bottom_stock_price == True:
+                    
                         moving_average_price_prev = 0
                         price_top_moving = False
 
@@ -337,7 +341,6 @@ class Kiwoom(QAxWidget):
                                 break
 
                             idx += 1
-                            print(idx + "          123213213")
 
                         # 해당 부분 이평선의 가장 최근 일자의 이평선 가격보다 낮은지 확인
                         if price_top_moving == True:
@@ -345,9 +348,7 @@ class Kiwoom(QAxWidget):
                                 print("포착된 이평선의 가격이 오늘자(최근일자) 이평선 가격보다 낮은 것 확인됨")
                                 print("포착된 부분의 일봉 저가가 오늘자 일봉의 고가보다 낮은지 확인됨")
                                 pass_success = True
-                                print(pass_success)
-                    '''
-                print("A234234")
+
                 if pass_success == True:
                     print("조건부 통과됨")
 
@@ -410,6 +411,29 @@ class Kiwoom(QAxWidget):
         self.dynamicCall("CommRqData(QString, QString, int, QString)", "주식일봉차트조회", "opt10081", sPrevNext, self.screen_calculation_stock)    # Tr서버로 전송 -Transaction
 
         self.calculator_event_loop.exec_()
+
+    # 매수법칙 게산 들어가면 됨
+
+    def read_code(self):
+
+        if os.path.exists("D:/pythoncharm/week1/files/condition_stock.txt"):
+            f = open("D:/pythoncharm/week1/files/condition_stock.txt", "r", encoding="utf8")
+
+            lines = f.readlines()
+            for line in lines:
+                if line != "":
+                    ls = line.split("\t")
+
+                    stock_code = ls[0]
+                    stock_name = ls[1]
+                    stock_price = int(ls[2].split("\n")[0])
+                    stock_price = abs(stock_price)
+
+                    self.portfolio_stock_dict.update({stock_code:{"종목명":stock_name, "현재가":stock_price}})
+
+            f.close()
+
+            print(self.portfolio_stock_dict)
 
 
 
