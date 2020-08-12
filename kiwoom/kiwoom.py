@@ -6,7 +6,7 @@ from config.errorCode import *
 from PyQt5.QtTest import *
 from config.kiwoomType import *
 
-# https://www.youtube.com/watch?v=c8oDIpHuvyY&list=PLDtzZPtOGenaSknTbsb6x6L39V0VPz_rS&index=65 , 처음부터 시작
+# https://www.youtube.com/watch?v=UWjXETlJee4&list=PLDtzZPtOGenaSknTbsb6x6L39V0VPz_rS&index=68 , 처음부터 시작
 
 class Kiwoom(QAxWidget):
     def __init__(self):
@@ -84,6 +84,7 @@ class Kiwoom(QAxWidget):
 
     def real_event_slots(self):
         self.OnReceiveRealData.connect(self.realdata_slot)
+        self.OnReceiveChejanData.connect(self.chejan_slot)
 
     def login_slot(self, errCode):
         print(errors(errCode))
@@ -574,6 +575,12 @@ class Kiwoom(QAxWidget):
             if sCode in self.account_stock_dict.keys() and sCode not in self.jango_dict.keys():
                 print("%s %s" %("신규매도를 한다", sCode))
 
+                asd = self.account_stock_dict[sCode]
+
+                self.dynamicCall("SendOrder(QString, QString, QString, int, QString, int, int, QString, QString)",
+                                 "신규매도", self.portfolio_stock_dict[sCode]['주문용스크린번호'], self.account_num, 2,
+                                 sCode, asd['매매가능수량'], 0, self.realType.SENDTYPE['거래구분']['시장가'], "")
+
             # 오늘 산 잔고에 있을경우
             elif sCode in self.jango_dict.keys():
                 print("%s %s" %("신규매도를 한다2", sCode))
@@ -594,8 +601,13 @@ class Kiwoom(QAxWidget):
                 elif not_quantity == 0:
                     del self.not_account_stock_dict[order_num]
 
-
-
+    def chejan_slot(self, sGubun, nItemCnt, sFIdList):
+        
+        if int(sGubun) == 0:
+            print("주문체결")
+            
+        elif int(sGubun) == 1:
+            print("잔고")
 
                 
                 
